@@ -1,0 +1,4 @@
+#ID|Name|URL|Transcode_Args
+times_radio|Times Radio|http://timesradio.wireless.radio/stream-mobile
+kfjc|KFJC 89.7 FM|http://netcast.kfjc.org/kfjc-192k-aac
+nasa_tv|NASA TV|https://www.youtube.com/watch?v=21X5lGlDOfg
