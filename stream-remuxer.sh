@@ -142,6 +142,17 @@ case ${URI} in
 			# TODO: nice 404 error or something
 			exit 1
 		fi
+		EXTINF_TAGS="${CHANNELS["${CHANNEL_ID}"]%%|*}"
+		if [[ "x${EXTINF_TAGS}" == x ]]
+		then
+			EXTINF_TAGS="${CHANNEL_ID}"
+		fi
+		if [[ ! "${EXTINF_TAGS}" =~ , ]]
+		then
+			CHANNEL_NAME="${EXTINF_TAGS##*,}"
+		else
+			CHANNEL_NAME="${EXTINF_TAGS}"
+		fi
 		CHANNEL_URL_AND_TRANSCODE_OPTS="${CHANNELS["${CHANNEL_ID}"]#*|}"
 		if [[ "${CHANNEL_URL_AND_TRANSCODE_OPTS}" =~ \| ]]
 		then
@@ -158,7 +169,8 @@ case ${URI} in
 		echo -ne '\015\012'
 		NONCE="__stream-remuxer_$$__"
 		(
-			vlc -I dummy --no-random --no-loop --no-repeat \
+			cvlc -I dummy -V vdummy -A adummy --no-dbus \
+				--no-random --no-loop --no-repeat \
 				--telnet-password "${NONCE}" \
 				"${CHANNEL_URL}" \
 				--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=/dev/fd/3}" \
@@ -170,7 +182,7 @@ case ${URI} in
 			VLC_PID="$(ps auwwx | awk "(/vlc -I dummy/ && /${NONCE}/ && !/awk/){print \$2}")"
 			if [[ "x${VLC_PID}" != x ]]
 			then
-				kill -TERM ${VLC_PID}
+				kill -9 ${VLC_PID}
 			fi
 		)
 		;;
