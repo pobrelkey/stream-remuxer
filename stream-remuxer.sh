@@ -162,12 +162,16 @@ case ${URI} in
 				--telnet-password "${NONCE}" \
 				"${CHANNEL_URL}" \
 				--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=/dev/fd/3}" \
-				</dev/null >/dev/null 2>/dev/null
+				</dev/null 1>&2
 		) 3>&1 | (
 			# copy output from VLC until we can write no more (i.e. client disconnects)...
 			cat 2>/dev/null
 			# ...then forcibly kill VLC as otherwise it'll stream forever
-			kill -TERM $(ps auwwx | awk "(/vlc -I dummy/ && /${NONCE}/ && !/awk/){print \$2}")
+			VLC_PID="$(ps auwwx | awk "(/vlc -I dummy/ && /${NONCE}/ && !/awk/){print \$2}")"
+			if [[ "x${VLC_PID}" != x ]]
+			then
+				kill -TERM ${VLC_PID}
+			fi
 		)
 		;;
 	
