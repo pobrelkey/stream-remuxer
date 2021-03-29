@@ -79,6 +79,22 @@ then
 	exit 0
 fi
 
+function notfound() {
+	echo -ne 'HTTP/1.0 404 Not Found\015\012'
+	echo -ne 'Content-type: text/html\015\012'
+	echo -ne 'Pragma: no-cache\015\012'
+	echo -ne 'Connection: close\015\012'
+	echo -ne '\015\012'
+	cat <<-__404__
+	<html><head>
+	<title>stream remuxer (${BASE_ADDR}:${LISTEN_PORT})</title>
+	</head><body>
+	<h1>404 Not Found</h1>
+	<hr /><p><a href='/'>Stream Remuxer</a> at ${BASE_ADDR} port ${LISTEN_PORT}</p>
+	</body></html>
+__404__
+}
+
 case ${URI} in
 	/index.m3u*|/playlist.m3u*)
 		# serve up an M3U playlist of all channels we know about
@@ -139,8 +155,8 @@ case ${URI} in
 		CHANNEL_ID="${URI2%%\?*}"
 		if [[ ! -v CHANNELS["${CHANNEL_ID}"] ]]
 		then
-			# TODO: nice 404 error or something
-			exit 1
+			notfound
+			exit 0
 		fi
 		EXTINF_TAGS="${CHANNELS["${CHANNEL_ID}"]%%|*}"
 		if [[ "x${EXTINF_TAGS}" == x ]]
@@ -179,7 +195,7 @@ case ${URI} in
 			# copy output from VLC until we can write no more (i.e. client disconnects)...
 			cat 2>/dev/null
 			# ...then forcibly kill VLC as otherwise it'll stream forever
-			VLC_PID="$(ps auwwx | awk "(/vlc -I dummy/ && /${NONCE}/ && !/awk/){print \$2}")"
+			VLC_PID="$(ps auwwx | awk "(/cvlc -I dummy/ && /${NONCE}/ && !/awk/){print \$2}")"
 			if [[ "x${VLC_PID}" != x ]]
 			then
 				kill -9 ${VLC_PID}
@@ -188,19 +204,7 @@ case ${URI} in
 		;;
 	
 	*)
-		echo -ne 'HTTP/1.0 404 Not Found\015\012'
-		echo -ne 'Content-type: text/html\015\012'
-		echo -ne 'Pragma: no-cache\015\012'
-		echo -ne 'Connection: close\015\012'
-		echo -ne '\015\012'
-		cat <<-__404__
-		<html><head>
-		<title>stream remuxer (${BASE_ADDR}:${LISTEN_PORT})</title>
-		</head><body>
-		<h1>404 Not Found</h1>
-		<hr /><p><a href='/'>Stream Remuxer</a> at ${BASE_ADDR} port ${LISTEN_PORT}</p>
-		</body></html>
-		__404__
+		notfound
 		;;
 
 esac
