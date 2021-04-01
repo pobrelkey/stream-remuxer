@@ -205,8 +205,8 @@ case ${URI} in
 		;;
 	
 	/stream/*)
-		URI2="${URI#/stream/}"
-		CHANNEL_ID="${URI2%%\?*}"
+		CHANNEL_ID="${URI#/stream/}"
+		CHANNEL_ID="${CHANNEL_ID%%\?*}"
 		if [[ ! -v CHANNEL_URLS["${CHANNEL_ID}"] ]]
 		then
 			notfound
@@ -235,7 +235,6 @@ case ${URI} in
 		echo -ne 'Pragma: no-cache\015\012'
 		echo -ne 'Connection: close\015\012'
 		echo -ne '\015\012'
-		NONCE="__stream-remuxer_$$__"
 		VLC_PID=
 		VLC_FIFO="/tmp/stream-remuxer.$$"
 		function onexit() {
@@ -251,7 +250,6 @@ case ${URI} in
 		# start VLC in the background, writing to a FIFO...
 		cvlc -I dummy -V vdummy -A adummy --no-dbus \
 			--no-random --no-loop --no-repeat --play-and-exit \
-			--telnet-password "${NONCE}" \
 			"${CHANNEL_URLS["${CHANNEL_ID}"]}" \
 			--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=${VLC_FIFO}}" \
 			</dev/null 1>&2 &
