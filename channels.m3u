@@ -1,9 +1,28 @@
 #EXTM3U
+
+# example channels list for stream-remuxer
+# (made up of "scratch monkey" streaming servers we don't care about)
+
+# a noted right-wing "news" channel, favored by a certain truth-impaired
+# former US politician
 #EXTINF:-1 tvg-id="Newsmax.us" tvg-logo="https://image.xumo.com/v1/channels/channel/9999194/300x300.png?type=color_onBlack" group-title="Test",FAKE NEWS
 https://nmxlive.akamaized.net/hls/live/529965/Live_1/index.m3u8
+
+# same channel as above, but with added transcode options - note that we've
+# added an sr-id option so that it has a different channel ID (and so is
+# accessed by a different URL)
+#EXTINF:-1 sr-id="tiny.newsmax.us" sr-transcode-opts="transcode{vcodec=mp4v,deinterlace,width=256,height=144,vb=320,acodec=mpga,ab=48}" tvg-id="Newsmax.us" tvg-logo="https://image.xumo.com/v1/channels/channel/9999194/300x300.png?type=color_onBlack" group-title="Test",teeny tiny FAKE NEWS
+https://nmxlive.akamaized.net/hls/live/529965/Live_1/index.m3u8
+
+# a shopping channel (anti-features on most cable/satellite providers)
 #EXTINF:-1 tvg-id="hsn.com" tvg-logo="https://cdn.tvpassport.com/image/station/240x135/homeshop.png" group-title="Test",SHOPPING
 https://html5-lh.akamaihd.net/i/html5_01@182967/master.m3u8
+
+# an internet radio station - this one is home to a prominent far-right
+# conspiracy theorist
 #EXTINF:-1 tvg-id="1.gcnlive.com" tvg-logo="http://cdn-radiotime-logos.tunein.com/p345277g.png" group-title="Test",CONSPIRACY TALK
 https://gcnplayer.gcnlive.com/channel1-hi.mp3
+
+# another radio station, containing similar content as the previous one
 #EXTINF:-1 tvg-id="republicbroadcasting.org" tvg-logo="https://cdn.onlineradiobox.com/img/l/3/14963.v1.png" group-title="Test",MORE CONSPIRACY TALK
 http://216.240.133.177:2005/
