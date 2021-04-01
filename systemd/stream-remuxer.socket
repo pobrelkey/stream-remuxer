@@ -1,0 +1,14 @@
+[Unit]
+Description=Streaming Media Remultiplexer server socket
+
+[Socket]
+Accept=yes
+
+# Specify the address on which stream-remuxer will accept connections.
+ListenStream=127.0.0.1:9979
+# To listen on all interfaces rather than just the loopback interface,
+# simply omit the address, as in the following line:
+#ListenStream=9979
+
+[Install]
+WantedBy=sockets.target

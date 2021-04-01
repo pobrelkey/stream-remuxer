@@ -1,0 +1,22 @@
+[Unit]
+Description=Streaming Media Remultiplexer service
+Requires=stream-remuxer.socket
+
+[Service]
+Type=simple
+StandardInput=socket
+StandardError=journal
+TimeoutStopSec=5
+
+# By default systemd starts services as root -
+# this is a problem for VLC, which will exit if invoked as root.
+# So, we need to run as an unprivileged user/group:
+User=nobody
+Group=nogroup
+
+# The following should be the full path to the stream-remuxer script
+# on your system, followed by any needed command line options.
+ExecStart=-/opt/stream-remuxer/stream-remuxer.sh
+
+[Install]
+WantedBy=multi-user.target
