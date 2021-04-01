@@ -51,12 +51,14 @@ then
 	exec busybox nc -ll -w 0 -p "${LISTEN_PORT}" -e "${0}" --inetd
 fi
 
-# Read in the channels.txt content into a Bash associative array
+# Read in the channels.m3u content into a Bash associative array
 declare -A CHANNEL_EXTINFS
 declare -A CHANNEL_URLS
 CHANNEL_EXTINF=
-while read LINE
+while true
 do
+  read LINE
+  READSTATUS=$?
 	if [[ "${LINE}" =~ ^#EXTINF: ]]
 	then
 		CHANNEL_EXTINF="${LINE}"
@@ -82,6 +84,10 @@ do
 		CHANNEL_URLS["${CHANNEL_ID}"]="${LINE}"
 		CHANNEL_EXTINF=
 	fi
+	if [[ ${READSTATUS} != 0 ]]
+	then
+	  break
+  fi
 done < "${CHANNELS_M3U}"
 
 # read HTTP headers, ignore all but the URI
@@ -191,14 +197,13 @@ case ${URI} in
 		fi
 		echo -ne 'HTTP/1.0 200 OK\015\012'
 		echo -ne 'Content-type: video/MP2T\015\012'
-
 		echo -ne 'Pragma: no-cache\015\012'
 		echo -ne 'Connection: close\015\012'
 		echo -ne '\015\012'
 		NONCE="__stream-remuxer_$$__"
 		(
 			cvlc -I dummy -V vdummy -A adummy --no-dbus \
-				--no-random --no-loop --no-repeat \
+				--no-random --no-loop --no-repeat --play-and-exit \
 				--telnet-password "${NONCE}" \
 				"${CHANNEL_URLS["${CHANNEL_ID}"]}" \
 				--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=/dev/fd/3}" \
