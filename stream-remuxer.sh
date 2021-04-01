@@ -26,30 +26,61 @@
 #
 
 
-# User-tweakable parameters...
-LISTEN_PORT="${LISTEN_PORT:-9979}"
-CHANNELS_M3U="${CHANNELS_M3U:-$(dirname "${0}")/channels.m3u}"
-BASE_ADDR="${BASE_ADDR:-127.0.0.1}"
+# Defaults which can be specified via environment variables
+# (but which can be overridden by command-line options)
+SR_LOCAL_PORT="${SR_LOCAL_PORT:-9979}"
+SR_CHANNELS_M3U="${SR_CHANNELS_M3U:-$(dirname "${0}")/channels.m3u}"
+SR_LOCAL_ADDR="${SR_LOCAL_ADDR:-127.0.0.1}"
 
 
-########################################################################
-# (no user-serviceable parts below this line)
-
-
-# Check that the channels.m3u file exists
-if [[ ! -e "${CHANNELS_M3U}" ]]
-then
-	echo "ERROR: must have a channels.m3u file" 1>&2 
-	exit 1
-fi
+# grok command line options
+while getopts 'a:p:c:h' OPT; do
+	case "${OPT}" in
+		h)
+			echo "usage: ${0} [-a local_address] [-p local_port] [-c channels.m3u]"
+			exit 0
+			;;
+		a)
+			SR_LOCAL_ADDR="${OPTARG}"
+			;;
+		p)
+			SR_LOCAL_PORT="${OPTARG}"
+			;;
+		c)
+			SR_CHANNELS_M3U="${OPTARG}"
+			;;
+		\?)
+			echo "ERROR: invalid Option: -$OPTARG" 1>&2
+			exit 1
+			;;
+		:)
+			echo "ERROR: invalid Option: -$OPTARG requires an argument" 1>&2
+			exit 1
+			;;
+	esac
+done
 
 # If manually invoked, spawn a TCP server which will then re-invoke the script
 # inetd-style, i.e. with standard input/output piped to the TCP connection.
-if [[ "${1}" != '--inetd' ]]
+if [[ -t 1 ]]
 then
-	echo "Listening on port ${LISTEN_PORT} - channels in ${CHANNELS_M3U}"
-	exec busybox nc -ll -w 0 -p "${LISTEN_PORT}" -e "${0}" --inetd
+	echo "Listening on port ${SR_LOCAL_PORT} - channels in ${SR_CHANNELS_M3U}"
+	exec busybox nc -ll -w 0 -p "${SR_LOCAL_PORT}" "${SR_LOCAL_ADDR}" -e "${0}" -a "${SR_LOCAL_ADDR}" -p "${SR_LOCAL_PORT}" -c "${SR_CHANNELS_M3U}"
 fi
+
+# Check that the channels.m3u file exists
+if [[ ! -e "${SR_CHANNELS_M3U}" ]]
+then
+	echo -ne "HTTP/1.0 500 Internal Server Error\015\012"
+	echo -ne "Content-type: text/html\015\012"
+	echo -ne "Pragma: no-cache\015\012"
+	echo -ne "Connection: close\015\012"
+	echo -ne "\015\012"
+	echo "<html><head><title>Configuration Error</title></head><body><h1>Configuration Error</h1><p>Must have a <tt>channels.m3u</tt> file</p>${FOOTER}</body></html>"
+	exit 1
+fi
+
+FOOTER="<hr /><p><a href='/'>Stream Remuxer</a> at ${SR_LOCAL_ADDR} port ${SR_LOCAL_PORT}</p>"
 
 # Read in the channels.m3u content into a Bash associative array
 declare -A CHANNEL_EXTINFS
@@ -59,7 +90,11 @@ while true
 do
   read LINE
   READSTATUS=$?
-	if [[ "${LINE}" =~ ^#EXTINF: ]]
+  if [[ "${LINE}" =~ ^.?.?.?#EXTM3U ]]
+  then
+    # skip header line - be sure to catch header lines with UTF-8 BOM
+    true
+	elif [[ "${LINE}" =~ ^#EXTINF: ]]
 	then
 		CHANNEL_EXTINF="${LINE}"
 	elif [[ "${LINE}" =~ ^[^#] ]]
@@ -88,7 +123,7 @@ do
 	then
 	  break
   fi
-done < "${CHANNELS_M3U}"
+done < "${SR_CHANNELS_M3U}"
 
 # read HTTP headers, ignore all but the URI
 read METHOD URI VERSION
@@ -104,7 +139,7 @@ then
 	echo -ne "Pragma: no-cache\015\012"
 	echo -ne "Connection: close\015\012"
 	echo -ne "\015\012"
-	echo "<html><head><title>Unsupported method</title></head><body><h1>Unsupported method</h1></body></html>"
+	echo "<html><head><title>Unsupported method</title></head><body><h1>Unsupported method</h1></body>${FOOTER}</html>"
 	exit 0
 fi
 
@@ -116,10 +151,10 @@ function notfound() {
 	echo -ne '\015\012'
 	cat <<-__404__
 	<html><head>
-	<title>stream remuxer (${BASE_ADDR}:${LISTEN_PORT})</title>
+	<title>Not Found</title>
 	</head><body>
 	<h1>404 Not Found</h1>
-	<hr /><p><a href='/'>Stream Remuxer</a> at ${BASE_ADDR} port ${LISTEN_PORT}</p>
+	${FOOTER}
 	</body></html>
 __404__
 }
@@ -136,7 +171,7 @@ case ${URI} in
 		for CHANNEL_ID in "${!CHANNEL_URLS[@]}"
 		do
 			echo "${CHANNEL_EXTINFS["${CHANNEL_ID}"]}"
-			echo "http://${BASE_ADDR}:${LISTEN_PORT}/stream/${CHANNEL_ID}"
+			echo "http://${SR_LOCAL_ADDR}:${SR_LOCAL_PORT}/stream/${CHANNEL_ID}"
 		done
 		;;
 
@@ -149,7 +184,7 @@ case ${URI} in
 		echo -ne '\015\012'
 		cat <<-__HEADER__
 		<html><head>
-		<title>stream remuxer (${BASE_ADDR}:${LISTEN_PORT})</title>
+		<title>stream remuxer (${SR_LOCAL_ADDR}:${SR_LOCAL_PORT})</title>
 		</head><body>
 		<h1>Stream Remuxer</h1>
 		<p><a href='/playlist.m3u'>Playlist</a></p>
@@ -165,7 +200,7 @@ case ${URI} in
 			echo "<li><a href='/stream/${CHANNEL_ID}'>${EXTINF_TAGS##*,}</a></li>"
 		done
 		echo '</ul></p>'
-		echo "<hr /><p><a href='/'>Stream Remuxer</a> at ${BASE_ADDR} port ${LISTEN_PORT}</p>"
+		echo "${FOOTER}"
 		echo '</body></html>'
 		;;
 	
@@ -201,23 +236,31 @@ case ${URI} in
 		echo -ne 'Connection: close\015\012'
 		echo -ne '\015\012'
 		NONCE="__stream-remuxer_$$__"
-		(
-			cvlc -I dummy -V vdummy -A adummy --no-dbus \
-				--no-random --no-loop --no-repeat --play-and-exit \
-				--telnet-password "${NONCE}" \
-				"${CHANNEL_URLS["${CHANNEL_ID}"]}" \
-				--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=/dev/fd/3}" \
-				</dev/null 1>&2
-		) 3>&1 | (
-			# copy output from VLC until we can write no more (i.e. client disconnects)...
-			cat 2>/dev/null
-			# ...then forcibly kill VLC as otherwise it'll stream forever
-			VLC_PID="$(ps auwwx | awk "(/-I dummy -V dummy -A dummy/ && /${NONCE}/ && !/awk/){print \$2}")"
-			if [[ "x${VLC_PID}" != x ]]
+		VLC_PID=
+		VLC_FIFO="/tmp/stream-remuxer.$$"
+		function onexit() {
+			if [[ "x${VLC_PID}" != 'x' ]]
 			then
-				kill -9 ${VLC_PID}
+				# forcibly kill VLC as otherwise it plays the stream forever
+				kill -9 "${VLC_PID}"
 			fi
-		)
+			rm -f "${VLC_FIFO}"
+		}
+		trap onexit EXIT
+		mkfifo -m 0600 "${VLC_FIFO}"
+		# start VLC in the background, writing to a FIFO...
+		cvlc -I dummy -V vdummy -A adummy --no-dbus \
+			--no-random --no-loop --no-repeat --play-and-exit \
+			--telnet-password "${NONCE}" \
+			"${CHANNEL_URLS["${CHANNEL_ID}"]}" \
+			--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=${VLC_FIFO}}" \
+			</dev/null 1>&2 &
+		VLC_PID=$!
+		# ...then have cat read from that fifo until it can write no more
+		# (i.e. the client disconnects)...
+		cat "${VLC_FIFO}"
+		# ...at which the exit trap kicks in and kills VLC (complicated, but
+		# if we just ran VLC dumping to stdout, it wouldn't know when to quit)
 		;;
 	
 	*)
