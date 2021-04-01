@@ -88,12 +88,12 @@ declare -A CHANNEL_URLS
 CHANNEL_EXTINF=
 while true
 do
-  read LINE
-  READSTATUS=$?
-  if [[ "${LINE}" =~ ^.?.?.?#EXTM3U ]]
-  then
-    # skip header line - be sure to catch header lines with UTF-8 BOM
-    true
+	read LINE
+	READSTATUS=$?
+	if [[ "${LINE}" =~ ^.?.?.?#EXTM3U ]]
+	then
+		# skip header line - be sure to catch header lines with UTF-8 BOM
+		true
 	elif [[ "${LINE}" =~ ^#EXTINF: ]]
 	then
 		CHANNEL_EXTINF="${LINE}"
@@ -230,6 +230,26 @@ case ${URI} in
 		else
 			TRANSCODE_OPTS=""
 		fi
+		if [[ "${EXTINF_TAGS}" =~ \ sr-net-id=\".*\" ]]
+		then
+			NET_ID="${EXTINF_TAGS#* sr-net-id=\"}"
+			NET_ID="${NET_ID%%\"*}:"
+		else
+			NET_ID=65535
+		fi
+		if [[ "${EXTINF_TAGS}" =~ \ sr-ts-id=\".*\" ]]
+		then
+			TS_ID="${EXTINF_TAGS#* sr-ts-id=\"}"
+			TS_ID="${TS_ID%%\"*}:"
+		elif [[ "x$(which cksum)" != 'x' ]]
+		then
+			# use cksum to generate an integer TS ID from the channel ID
+			TS_ID="$(echo "${CHANNEL_ID}" | cksum)"
+			TS_ID="${TS_ID%% *}"
+			TS_ID="$((${TS_ID} % 65529))"
+		else
+			TS_ID=1
+		fi
 		echo -ne 'HTTP/1.0 200 OK\015\012'
 		echo -ne 'Content-type: video/MP2T\015\012'
 		echo -ne 'Pragma: no-cache\015\012'
@@ -250,6 +270,7 @@ case ${URI} in
 		# start VLC in the background, writing to a FIFO...
 		cvlc -I dummy -V vdummy -A adummy --no-dbus \
 			--no-random --no-loop --no-repeat --play-and-exit \
+			--sout-ts-netid "${NET_ID}" --sout-ts-tsid "${TS_ID}" \
 			"${CHANNEL_URLS["${CHANNEL_ID}"]}" \
 			--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=${VLC_FIFO}}" \
 			</dev/null 1>&2 &
