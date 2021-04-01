@@ -103,14 +103,18 @@ do
 		then
 			CHANNEL_ID="${CHANNEL_EXTINF#* sr-id=\"}"
 			CHANNEL_ID="${CHANNEL_ID%%\"*}"
-		elif [[ "${CHANNEL_EXTINF}" =~ \ tvg-id=\".*\" ]]
+		fi
+		if [[ "x${CHANNEL_ID}" == x && "${CHANNEL_EXTINF}" =~ \ tvg-id=\".*\" ]]
 		then
 			CHANNEL_ID="${CHANNEL_EXTINF#* tvg-id=\"}"
 			CHANNEL_ID="${CHANNEL_ID%%\"*}"
-		elif [[ "${CHANNEL_EXTINF}" =~ , ]]
+		fi
+		if [[ "x${CHANNEL_ID}" == x && "${CHANNEL_EXTINF}" =~ , ]]
 		then
 			CHANNEL_ID="${CHANNEL_EXTINF##*,}"
-		else
+		fi
+		if [[ "x${CHANNEL_ID}" == x ]]
+		then
 			# ugly but better than nothing...
 			CHANNEL_ID="${LINE}"
 		fi
@@ -121,8 +125,8 @@ do
 	fi
 	if [[ ${READSTATUS} != 0 ]]
 	then
-	  break
-  fi
+		break
+	fi
 done < "${SR_CHANNELS_M3U}"
 
 # read HTTP headers, ignore all but the URI
