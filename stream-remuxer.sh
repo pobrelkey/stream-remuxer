@@ -85,6 +85,7 @@ FOOTER="<hr /><p><a href='/'>Stream Remuxer</a> at ${SR_LOCAL_ADDR} port ${SR_LO
 # Read in the channels.m3u content into a Bash associative array
 declare -A CHANNEL_EXTINFS
 declare -A CHANNEL_URLS
+CHANNEL_ID=
 CHANNEL_EXTINF=
 while true
 do
@@ -121,6 +122,7 @@ do
 		CHANNEL_ID="${CHANNEL_ID//[^-_a-zA-Z0-9]/_}"
 		CHANNEL_EXTINFS["${CHANNEL_ID}"]="${CHANNEL_EXTINF}"
 		CHANNEL_URLS["${CHANNEL_ID}"]="${LINE}"
+    CHANNEL_ID=
 		CHANNEL_EXTINF=
 	fi
 	if [[ ${READSTATUS} != 0 ]]
@@ -273,9 +275,9 @@ case ${URI} in
 		mkfifo -m 0600 "${VLC_FIFO}"
 		# start VLC in the background, writing to a FIFO...
 		cvlc -I dummy -V vdummy -A adummy --no-dbus \
-			--no-random --no-loop --no-repeat --play-and-exit \
-			--sout-ts-netid "${NET_ID}" --sout-ts-tsid "${TS_ID}" \
-			"${CHANNEL_URLS["${CHANNEL_ID}"]}" \
+			--no-random --no-loop --no-repeat \
+			--sout-ts-netid="${NET_ID}" --sout-ts-tsid="${TS_ID}" \
+			"${CHANNEL_URLS["${CHANNEL_ID}"]}" vlc://quit \
 			--sout="#${TRANSCODE_OPTS}file{mux=ts,dst=${VLC_FIFO}}" \
 			</dev/null 1>&2 &
 		VLC_PID=$!
