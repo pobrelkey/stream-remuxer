@@ -239,7 +239,7 @@ case ${URI} in
 			NET_ID="${EXTINF_TAGS#* sr-net-id=\"}"
 			NET_ID="${NET_ID%%\"*}:"
 		else
-			NET_ID=65535
+			NET_ID=65310
 		fi
 		if [[ "${EXTINF_TAGS}" =~ \ sr-ts-id=\".*\" ]]
 		then
