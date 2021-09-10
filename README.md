@@ -35,7 +35,9 @@ So I wrote this tool, with the following objectives:
   - Or, you could install a "proper" `inetd` (like `xinetd`) on your system and configure it to run this script whenever it receives a connection on port 9979.  Please see the documentation for your chosen `inetd` for instructions on how to do this.  Ensure the script is run as `nobody` or a similarly unprivileged user, as if VLC is run as root it will complain and quit.
   - Or, for development purposes, you could simply invoke `stream-remuxer.sh` from a terminal with no arguments - this starts up a server on port 9979, provided you have `busybox` installed, and it has the `nc` applet built in (which is how it's built on any mainstream Linux distro).
 - On the machine where you've installed stream-remuxer, browse to http://127.0.0.1:9979/ - assuming everything's working you should see a simple HTML menu:
+
   ![menu](doc/menu.png "menu")
+
 - Now set up an "IPTV Automatic" network in TVHeadend, with the playlist URL as http://127.0.0.1:9979/playlist.m3u - see the [TVHeadend docs](https://tvheadend.org/projects/tvheadend/wiki/Automatic_IPTV_Network) for more details.  You should be able to "scan" this network and have TVHeadend find all the channels in your list.
 
 The above instructions assume you're installing stream-reumxer on the same box as TVHeadend - if you aren't:
